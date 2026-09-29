@@ -16,7 +16,8 @@ export const relativePathSchema = z
   .max(1024)
   .refine(
     (p) =>
-      !/[\\:\x00-\x1f]/.test(p) &&
+      !/[\\:]/.test(p) &&
+      [...p].every((c) => c.charCodeAt(0) >= 32) &&
       !p.startsWith('/') &&
       p.split('/').every((s) => s !== '..' && s !== ''),
     'Expected a relative POSIX path inside the repository',
@@ -27,7 +28,10 @@ const textSchema = z
   .max(2000)
   .refine(
     (s) =>
-      !s.includes('<!-- ruleskit:') && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(s),
+      !s.includes('<!-- ruleskit:') &&
+      [...s].every(
+        (c) => c.charCodeAt(0) >= 32 || ['\t', '\r', '\n'].includes(c),
+      ),
     'Invalid control characters or reserved ownership marker',
   );
 export const factSchema = z

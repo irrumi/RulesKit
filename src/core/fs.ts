@@ -107,6 +107,7 @@ export async function withLock<T>(
     if ((error as NodeJS.ErrnoException).code === 'EEXIST')
       throw new Error(
         'RulesKit is locked. If no RulesKit process is running, remove .ruleskit/write.lock and retry.',
+        { cause: error },
       );
     throw error;
   }
