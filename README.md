@@ -1,73 +1,75 @@
 # RulesKit
 
-One reviewed source of project instructions for multiple AI coding agents.
+**Generate and sync project-specific instructions for six AI coding agents from one reviewed YAML configuration.**
 
-RulesKit scans repository evidence, stores it in readable YAML, and generates agent-specific instruction files. It distinguishes detected facts, inferred conventions and your own rules. It runs locally without an API key, telemetry or a cloud service.
+Stop maintaining separate rule files by hand. RulesKit detects repository evidence, labels uncertain conventions, and checks when your instructions need updating. It runs locally without API keys or telemetry.
 
-For example, a React repository with `compilerOptions.strict: true`, Vitest and an existing `src/lib/api.ts` gets strict-mode and test-tool guidance plus a **labeled inference** to inspect the possible shared API client. A Cargo project gets Cargo-specific evidence instead. RulesKit does not invent universal style policies.
+[![CI](https://github.com/irrumi/RulesKit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/irrumi/RulesKit/actions/workflows/ci.yml) · [MIT license](LICENSE)
 
-## Install
+## Quick start
 
-Requires **Node.js 22 or later** and npm. This initial release is distributed from source; it has **not been published to the npm registry**. Do not assume `npx ruleskit` installs this project.
+Requires **Node.js 22+**, npm and Git. Tested on **Windows, macOS and Linux**.
+
+**v0.1 is available from source only:** there is no published npm package or GitHub release yet.
 
 ```sh
 git clone https://github.com/irrumi/RulesKit.git
 cd RulesKit
 npm ci
 npm run build
-node dist/cli.js --help
+node dist/cli.js scan --root .
 ```
 
-To install the built package's `ruleskit` command:
+This inspects RulesKit's own repository without changing files. To inspect yours, replace `.` with its directory. Run `node dist/cli.js --help` for all commands.
+
+### Generate instructions for your project
+
+Stay in the RulesKit checkout. Replace `../your-project` with an existing repository path:
 
 ```sh
-npm pack
-npm install --global ./irrumi-ruleskit-0.1.0.tgz
-ruleskit --help
+node dist/cli.js init --root "../your-project"
+# Review your project's .ruleskit/config.yaml; choose agents and add rules.
+node dist/cli.js generate --root "../your-project" --dry-run
+node dist/cli.js generate --root "../your-project"
+node dist/cli.js audit --root "../your-project"
 ```
 
-Alternatively use `node /path/to/RulesKit/dist/cli.js` in place of `ruleskit`, or pass `--root /path/to/your/project` from the checkout. The intended npm package name is `@irrumi/ruleskit`; registry publication is a separate release step.
+`init` writes only the canonical configuration. With all six agents selected and no existing instruction files, `generate` prints:
 
-## Quick start
-
-From the project you want to document:
-
-```sh
-ruleskit scan
-ruleskit init
-# Review .ruleskit/config.yaml; select agents and add userRules.
-ruleskit generate --dry-run
-ruleskit generate
-ruleskit audit
+```text
+Created CLAUDE.md
+Created AGENTS.md
+Created GEMINI.md
+Created .cursor/rules/ruleskit.mdc
+Created .github/copilot-instructions.md
+Created .windsurf/rules/ruleskit.md
+Created .ruleskit/state.json
 ```
 
-Commit `.ruleskit/config.yaml`, `.ruleskit/state.json` and the selected agent files together. After changing dependencies or project structure:
+A clean audit prints `RulesKit: synchronized` and exits with code **0**. Existing instruction files stop generation unless you explicitly merge; see [migration and recovery](docs/configuration.md#migrating-existing-instructions).
 
-```sh
-ruleskit sync --refresh --dry-run
-ruleskit sync --refresh
-ruleskit audit
+Prefer the shorter `ruleskit` command? [Install the built CLI locally](docs/usage.md#install-the-cli-command). `npx ruleskit` is not a distribution method for this project.
+
+## Why RulesKit?
+
+A project used with several coding agents can accumulate several copies of the same instructions. Dependency changes, new directories and manual edits make those copies drift apart. RulesKit gives you one configuration to review, generates the selected agent files, and reports drift before stale instructions go unnoticed.
+
+- **Ground rules in evidence.** Keep detected facts, inferred conventions and your own rules distinct.
+- **Review before writing.** Preview unified diffs with `--dry-run`; explicitly opt into merging existing files.
+- **Keep updates predictable.** Unchanged files stay untouched, and manually edited managed blocks stop synchronization.
+- **Check drift in CI.** Use a read-only audit with JSON output and meaningful exit codes.
+
+```text
+Repository evidence → .ruleskit/config.yaml → Agent instruction files
+                               ↑                      ↓
+                         reviewed rules       audit checks for drift
 ```
 
-For existing instructions, init preserves them. Review `ruleskit generate --merge --dry-run`, then explicitly use `--merge` to append managed blocks. See [migration and recovery](docs/configuration.md#migrating-existing-instructions).
-
-## Commands
-
-| Command    | Behavior                                                                                      |
-| ---------- | --------------------------------------------------------------------------------------------- |
-| `init`     | Analyze the repository and create canonical config; never writes agent instructions.          |
-| `scan`     | Read-only, deterministic evidence report; `--json` includes provenance and fingerprints.      |
-| `generate` | Render the saved canonical config into agent files.                                           |
-| `sync`     | Reconcile outputs with canonical config; `--refresh` explicitly rescans first.                |
-| `audit`    | Check input/structure drift, config changes, missing/edited/stale output and known shadowing. |
-
-All commands accept `--root` and `--json`. `init`, `generate` and `sync` accept `--dry-run`; the preview includes unified diffs and writes nothing. `generate`/`sync` accept `--merge` and `--overwrite-generated`. `--yes` is accepted for scripted workflows; commands are non-interactive and it **never grants overwrite permission**. `--refresh` is exclusive to `sync`.
-
-Exit codes: **0** success/synchronized, **1** stale audit, **2** invalid input, unsafe operation or filesystem failure. JSON errors go to stderr. Parse failures in supported manifests are scan warnings and make audit stale; an empty/unknown stack is not itself an error.
+For example, explicit TypeScript strict mode is a fact; a file named `src/lib/api.ts` suggests a possible shared API client and is labeled as an inference. RulesKit does not use an LLM to invent project policies.
 
 ## Supported agents
 
-| Agent          | Output                            |
+| Agent          | Generated file                    |
 | -------------- | --------------------------------- |
 | Claude Code    | `CLAUDE.md`                       |
 | OpenAI Codex   | `AGENTS.md`                       |
@@ -76,83 +78,76 @@ Exit codes: **0** success/synchronized, **1** stale audit, **2** invalid input, 
 | GitHub Copilot | `.github/copilot-instructions.md` |
 | Windsurf       | `.windsurf/rules/ruleskit.md`     |
 
-Choose only the agents you use. Formats were researched against official documentation on 2026-09-29. Current Windsurf documentation redirects to Devin Desktop, which prefers `.devin/rules` and retains `.windsurf/rules` as a fallback. RulesKit reports detected shadowing. See [compatibility decisions and primary sources](docs/compatibility.md); emitted file compatibility does not guarantee agent behavior.
+These are instruction-file adapters, not API integrations. Select only the agents you use.
 
-## Detection coverage
+Windsurf's current documentation redirects to Devin Desktop, which prefers `.devin/rules` and retains `.windsurf/rules` as a fallback. RulesKit reports detected shadowing. See [compatibility decisions and official sources](docs/compatibility.md) for formats, caveats and the research date.
 
-| Area                     | Implemented evidence                                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| JavaScript/TypeScript    | `package.json`, npm/pnpm/yarn/Bun lockfile presence, package-manager declaration, workspace manifests, JSONC tsconfigs and explicit strict mode. |
-| Frontend/backend         | Declared React, Next.js, Vue, Svelte, Express, NestJS; Python Django, DRF, FastAPI, Flask; Rust axum, actix-web, tokio.                          |
-| Python                   | `pyproject.toml` project/optional/development/Poetry dependency groups, requirements files, uv/Poetry locks.                                     |
-| Rust                     | Cargo package/workspace/dependency tables, lockfile and rustfmt config.                                                                          |
-| Tests and quality        | Vitest, Jest, Playwright, node:test script detection, pytest, Ruff, Black, mypy, ESLint, Prettier, TypeScript; Cargo test tooling.               |
-| Data/API                 | Declared Prisma, SQLAlchemy, sqlx, Diesel, DRF; labeled API-client filename inference.                                                           |
-| Structure/infrastructure | Scoped manifests, component/test/model/migration/backend/frontend directories, Docker, Compose, GitHub Actions, commitlint config presence.      |
-| Basic additional signals | Source extensions for Go/Java/Kotlin/C/C++; Go module, Maven, Gradle, CMake and PlatformIO file presence (not full semantic parsing).            |
+## What it detects
 
-Detection runs without executing scripts or configuration modules. Conflicting package managers produce a warning and suppress a confident command-runner choice. Manifest detection means **declared**, not verified running or installed. [Scan boundaries](docs/configuration.md#scan-boundaries) describe ignores and limits.
+RulesKit reads JavaScript/TypeScript, Python and Rust manifests, including workspace and mixed-language repositories. It detects declared frameworks such as React and Django, test and quality tools, package managers, data libraries, Docker, GitHub Actions and common project directories.
 
-## Canonical configuration
+Go, Java, Kotlin and C/C++ have basic filename and source-extension signals only. Manifest evidence means **declared**, not verified installed or running. Scanning does not execute repository scripts or configuration modules.
 
-`init` creates the full versioned snapshot. This shortened excerpt illustrates its shape; keep the generated fingerprint fields when editing:
+See the [detection coverage table](docs/usage.md#detection-coverage) and [scan boundaries](docs/configuration.md#scan-boundaries) for the exact inputs and limitations.
+
+## Common workflows
+
+After [installing the CLI command](docs/usage.md#install-the-cli-command), run these inside your target project, or pass `--root`:
+
+| Command                   | Use it to                                           |
+| ------------------------- | --------------------------------------------------- |
+| `ruleskit scan --json`    | Inspect evidence without writing files.             |
+| `ruleskit init`           | Create the canonical configuration for review.      |
+| `ruleskit generate`       | Generate instructions from the saved configuration. |
+| `ruleskit sync`           | Update instruction files after editing your rules.  |
+| `ruleskit sync --refresh` | Rescan repository evidence and update instructions. |
+| `ruleskit audit`          | Detect input, configuration and output drift.       |
+
+After changing dependencies or project structure:
+
+```sh
+ruleskit sync --refresh --dry-run
+ruleskit sync --refresh
+ruleskit audit
+```
+
+Plain `generate` and `sync` use the saved snapshot; only `sync --refresh` rescans. Exit codes are **0** for success/clean audit, **1** for stale audit, and **2** for errors. See [all flags and a CI example](docs/usage.md).
+
+## Customize your rules
+
+Run `init` first, then edit `.ruleskit/config.yaml`. For example, replace its `agents` and `userRules` fields with the following; retain the generated `version`, `detected` and other fields:
 
 ```yaml
-version: 1
 agents: [claude, codex, cursor]
-detected:
-  facts:
-    - id: framework:.:React
-      category: framework
-      value: React
-      scope: .
-      evidence: [package.json]
-      confidence: fact
-  # init also supplies inputs, structureHash, warnings, existingInstructions
-disabledRules: []
 userRules:
   - id: stable-api
     text: Preserve the documented JSON response fields in the billing API.
     scope: apps/backend
 ```
 
-Strict validation rejects unsupported versions, unknown keys, duplicate IDs and invalid paths. Ordinary sync preserves the config file, including comments. Refresh replaces the detected snapshot while retaining user rules, disabled IDs and agent choices; YAML formatting/comments are rewritten. [Configuration reference](docs/configuration.md).
+`agents` selects outputs, `userRules` adds your instructions, and `disabledRules` suppresses generated rule IDs. Scopes are included in the instruction text; v0.1 emits repository-wide files, not separate per-directory rules. The [configuration reference](docs/configuration.md) covers validation, refresh behavior and conflict recovery.
 
-## Safe synchronization
+## File safety and privacy
 
-- Existing human files require explicit `--merge`; original text is preserved outside managed markers.
-- Edits inside managed blocks stop sync. Move desired changes into canonical `userRules`, then preview `--overwrite-generated` before applying it.
-- Every output is validated before the first replacement. Paths are confined to the target root; symbolic links/junctions are refused for writes. A lock prevents simultaneous RulesKit writers.
-- Identical output is not rewritten. State and output are deterministic; no timestamps or absolute checkout paths are embedded.
-- Each file uses atomic replacement. A set of files is not one filesystem transaction; restore config/state/outputs together after an interrupted partial write.
-- RulesKit never deletes agent files. Deselected outputs remain reported until you manually archive/remove their managed blocks.
+- Writes are limited to `.ruleskit/` and the selected agent files inside the target root. The CLI makes no network requests and sends no telemetry; installing npm dependencies requires registry access.
+- Existing human files require `--merge`. Text outside managed markers is preserved; edits inside them stop synchronization. `--overwrite-generated` applies only to trusted managed blocks, and `--yes` never grants overwrite permission.
+- RulesKit validates the entire write plan, rejects linked write paths, and locks concurrent RulesKit writers. Each replacement is atomic; a multi-file update is not one filesystem transaction.
+- **No automatic backups are created.** Commit `.ruleskit/config.yaml`, `.ruleskit/state.json` and selected agent files together before updates. Review diffs and use [recovery instructions](docs/configuration.md#resolving-drift-and-conflicts) if a write is interrupted.
+- RulesKit never deletes agent files. Deselected outputs require manual archiving or removal of their managed blocks.
 
-Keep the target repository under version control and review diffs. This is a developer tool for a stable local working tree, not a sandbox against hostile concurrent filesystem changes.
+Use a stable local working tree; RulesKit is not a sandbox against hostile concurrent filesystem changes.
 
-## CI
+## Status and limitations
 
-Install RulesKit once from the built tarball and commit your project's generated config/state/files. For a consuming project with that tarball checked into `tools/`, a minimal job is:
+RulesKit is an early **0.1** CLI. Tests cover generation, file safety and packaged CLI workflows; they do not prove that each live agent loads or follows every instruction.
 
-```yaml
-name: Rules audit
-on: [push, pull_request]
-permissions:
-  contents: read
-jobs:
-  rules:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - run: npm install --global ./tools/irrumi-ruleskit-0.1.0.tgz
-      - run: ruleskit audit --json
-```
+It does not infer arbitrary architecture from source code, resolve inherited tsconfigs, interpret arbitrary build scripts, merge contradictory rules, read global agent preferences or support Antigravity. Source-body changes alone do not trigger drift; relevant manifest/config content and included path additions/removals do.
 
-Generate the initial snapshot **after** adding CI/tooling files so they are part of the accepted baseline. Audit never repairs files in CI. The project's own [CI workflow](.github/workflows/ci.yml) checks formatting, lint, types, tests, build and clean packaged installation across Windows, macOS and Linux.
+**Planned, not implemented:** path-scoped agent output, richer per-workspace detection, reviewed config migrations, native Devin support and a separately verified npm registry release.
 
-## Development
+## Development and contributing
+
+From the source checkout:
 
 ```sh
 npm ci
@@ -160,10 +155,6 @@ npm run check
 npm run smoke
 ```
 
-The scanner, typed evidence model, config parser, pure rule generators, agent adapters, safe writer and audit engine are separate modules. [Architecture and extension guide](docs/architecture.md) explains adding detectors, adapters and generators. [Contributing](CONTRIBUTING.md) describes validation and pull requests. MIT licensed.
+`check` runs formatting, lint, type checking, tests and build. `smoke` installs the packed CLI with production dependencies and exercises six repository fixtures. CI runs Node.js 22 on Windows, macOS and Linux, plus Node.js 24 and 26 on Linux.
 
-## Limits and roadmap
-
-v0.1 supports scoped evidence in one root config and repository-wide agent files. It does not infer arbitrary architecture from source code, resolve inherited tsconfigs, interpret arbitrary build scripts, enforce agent behavior, auto-merge contradictory rules, read global agent preferences or support Antigravity. Changes to source bodies alone do not trigger drift; relevant manifest/config content and included path additions/removals do. Large snapshots fail explicit size limits instead of silently truncating instructions.
-
-Next priorities: path-scoped agent output, richer per-workspace detection, reviewed config migrations, native Devin support and a separately verified npm registry release. Telemetry, accounts, hosted dashboards and paid AI dependencies are outside the local CLI's scope.
+Contributions to detectors, adapters, tests and documentation are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), the [architecture and extension guide](docs/architecture.md), and the [Code of Conduct](CODE_OF_CONDUCT.md). Licensed under [MIT](LICENSE).
