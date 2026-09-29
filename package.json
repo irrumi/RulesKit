@@ -17,6 +17,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "lint": "eslint .",
@@ -52,7 +53,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/diff": "^7.0.2",
     "@types/node": "^26.6.3",
     "eslint": "^10.11.0",
     "prettier": "^3.9.9",

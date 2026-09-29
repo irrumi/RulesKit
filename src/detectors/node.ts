@@ -25,11 +25,11 @@ export const nodeDetector: Detector = {
     for (const file of ctx.files) {
       const base = path.posix.basename(file);
       if (base === 'package.json') {
+        const source = await ctx.read(file);
         try {
-          const pkg = JSON.parse(await ctx.read(file));
+          const pkg = JSON.parse(source);
           if (!pkg || typeof pkg !== 'object' || Array.isArray(pkg))
             throw new Error('Expected object');
-          ctx.add('language', 'JavaScript', file);
           const deps = {
             ...pkg.dependencies,
             ...pkg.devDependencies,
@@ -60,7 +60,7 @@ export const nodeDetector: Detector = {
             if (typeof pkg.scripts?.[name] === 'string') {
               // Record only script names, never potentially secret-bearing command bodies.
               ctx.add('command', name, file);
-              if (/\bnode\s+--test\b/.test(pkg.scripts[name]))
+              if (/\b(?:node|tsx)\s+--test\b/.test(pkg.scripts[name]))
                 ctx.add('testing', 'node:test', file);
             }
           }

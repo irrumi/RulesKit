@@ -1,12 +1,19 @@
 import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import ignore, { type Ignore } from 'ignore';
-import { hash, readOptional, rootPath } from './core/fs.js';
+import {
+  hash,
+  readBytes,
+  decodeUtf8,
+  readOptional,
+  rootPath,
+} from './core/fs.js';
 import { snapshotSchema, type Fact, type Snapshot } from './model.js';
 import { nodeDetector } from './detectors/node.js';
 import { pythonRustDetector } from './detectors/python-rust.js';
 import { structureDetector } from './detectors/structure.js';
 import type { Detector } from './detectors/types.js';
+import { adapters } from './adapters.js';
 
 const excluded = new Set([
   '.git',
@@ -26,6 +33,9 @@ const excluded = new Set([
 ]);
 export function isInstruction(file: string): boolean {
   return (
+    Object.values(adapters).some(
+      (adapter) => file === adapter.path || file.endsWith(`/${adapter.path}`),
+    ) ||
     /(?:^|\/)(?:AGENTS(?:\.override)?\.md|CLAUDE(?:\.local)?\.md|GEMINI\.md|\.cursorrules|\.windsurfrules)$/.test(
       file,
     ) ||
@@ -44,9 +54,14 @@ export async function scan(
     instructions: string[] = [];
   const inputs: Record<string, string> = {};
   const read = async (file: string): Promise<string> => {
-    const value = await readOptional(root, file, 16 * 1024 * 1024);
-    if (value === null)
+    const bytes = await readBytes(root, file, 16 * 1024 * 1024);
+    if (bytes === null)
       throw new Error(`File disappeared during scan: ${file}`);
+    if (path.posix.basename(file) === 'bun.lockb') {
+      inputs[file] = hash(bytes);
+      return '';
+    }
+    const value = decodeUtf8(bytes, file);
     inputs[file] = hash(value.replaceAll('\r\n', '\n'));
     return value;
   };

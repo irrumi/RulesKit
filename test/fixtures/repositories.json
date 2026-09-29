@@ -1,0 +1,38 @@
+{
+  "react": {
+    "package.json": "{\"name\":\"web\",\"packageManager\":\"npm@10\",\"scripts\":{\"test\":\"vitest\",\"build\":\"vite build\"},\"dependencies\":{\"react\":\"^19\"},\"devDependencies\":{\"typescript\":\"^5\",\"vite\":\"^6\",\"vitest\":\"^3\",\"eslint\":\"^9\",\"prettier\":\"^3\"}}",
+    "tsconfig.json": "{ // strict is intentional\n\"compilerOptions\": {\"strict\": true,}, }",
+    "src/components/Button.tsx": "export const Button = () => null;",
+    "src/lib/api.ts": "export const api = {};"
+  },
+  "django": {
+    "pyproject.toml": "[project]\nname = 'backend'\nversion = '1.0.0'\ndependencies = ['Django>=5', 'djangorestframework>=3']\n[dependency-groups]\ndev = ['pytest', 'ruff', 'mypy']\n",
+    "uv.lock": "version = 1\n",
+    "backend/models/item.py": "class Item: pass\n",
+    "backend/migrations/0001_initial.py": "# initial migration\n"
+  },
+  "rust": {
+    "Cargo.toml": "[package]\nname = 'service'\nversion = '0.1.0'\nedition = '2021'\n[dependencies]\naxum = '0.8'\nsqlx = '0.8'\n",
+    "Cargo.lock": "version = 4\n",
+    "src/main.rs": "fn main() {}\n",
+    "rustfmt.toml": "edition = '2021'\n"
+  },
+  "monorepo": {
+    "package.json": "{\"workspaces\":[\"apps/*\"],\"packageManager\":\"pnpm@10\"}",
+    "pnpm-workspace.yaml": "packages:\n  - apps/*\n",
+    "apps/web/package.json": "{\"dependencies\":{\"react\":\"19\"},\"devDependencies\":{\"vitest\":\"3\"},\"scripts\":{\"test\":\"vitest\"}}",
+    "apps/web/src/app.tsx": "export const App = () => null;",
+    "apps/api/requirements.txt": "Django>=5\ndjangorestframework>=3\npytest\n",
+    "apps/api/manage.py": "# entry point\n",
+    "Dockerfile": "FROM python:3.12\n",
+    ".github/workflows/ci.yml": "name: CI\non: push\njobs: {}\n"
+  },
+  "existing": {
+    "AGENTS.md": "# Maintainer notes\r\nPreserve this exactly.\r\n",
+    "CLAUDE.md": "# Claude notes\nHuman-owned.\n",
+    ".cursor/rules/manual.mdc": "---\nalwaysApply: true\n---\nHuman rule\n"
+  },
+  "empty": {
+    "README.md": "# New project\n"
+  }
+}

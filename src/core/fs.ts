@@ -47,22 +47,45 @@ export async function safePath(
   }
   return current;
 }
-export async function readOptional(
+export async function readBytes(
   root: string,
   relative: string,
   maxBytes = 4 * 1024 * 1024,
-): Promise<string | null> {
+): Promise<Buffer | null> {
   const target = await safePath(root, relative);
   try {
     const info = await fs.stat(target);
     if (!info.isFile()) throw new Error(`Not a regular file: ${relative}`);
     if (info.size > maxBytes)
       throw new Error(`File exceeds ${maxBytes} byte limit: ${relative}`);
-    return await fs.readFile(target, 'utf8');
+    const bytes = await fs.readFile(target);
+    if (bytes.length > maxBytes)
+      throw new Error(`File exceeds ${maxBytes} byte limit: ${relative}`);
+    return bytes;
   } catch (error) {
     if (isMissing(error)) return null;
     throw error;
   }
+}
+export function decodeUtf8(bytes: Buffer, relative: string): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(
+      bytes,
+    );
+  } catch (error) {
+    throw new Error(
+      `Invalid UTF-8 in ${relative}; convert it explicitly before using RulesKit.`,
+      { cause: error },
+    );
+  }
+}
+export async function readOptional(
+  root: string,
+  relative: string,
+  maxBytes = 4 * 1024 * 1024,
+): Promise<string | null> {
+  const bytes = await readBytes(root, relative, maxBytes);
+  return bytes === null ? null : decodeUtf8(bytes, relative);
 }
 export interface Change {
   path: string;

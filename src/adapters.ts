@@ -24,7 +24,7 @@ function adapter(
     maxBytes,
     generate: (config) => `${START}\n${renderRules(config)}${END}`,
     validate(content) {
-      if (preamble && !content.startsWith(preamble))
+      if (preamble && !content.replaceAll('\r\n', '\n').startsWith(preamble))
         throw new Error(
           `${path}: frontmatter differs from the supported adapter format. Preserve it separately and restore the generated header.`,
         );

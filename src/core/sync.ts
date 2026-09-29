@@ -123,8 +123,16 @@ export async function planOutputs(
           throw new Error(
             `${adapter.path}: generated block was edited. Move intentional edits into userRules, then use --overwrite-generated (preview with --dry-run).`,
           );
+        const replacement =
+          existing.block.replaceAll('\r\n', '\n') === block
+            ? existing.block
+            : existing.block.includes('\r\n')
+              ? block.replaceAll('\n', '\r\n')
+              : block;
         after =
-          before.slice(0, existing.start) + block + before.slice(existing.end);
+          before.slice(0, existing.start) +
+          replacement +
+          before.slice(existing.end);
       } else {
         if (state?.outputs[adapter.path])
           throw new Error(

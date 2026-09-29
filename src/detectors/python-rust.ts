@@ -54,9 +54,10 @@ export const pythonRustDetector: Detector = {
       const base = path.posix.basename(file);
       let names: string[] = [];
       if (base === 'pyproject.toml' || base === 'Cargo.toml') {
+        const source = await ctx.read(file);
         let data;
         try {
-          data = parse(await ctx.read(file));
+          data = parse(source);
         } catch {
           ctx.warn(`Cannot parse ${file}; TOML detection skipped.`);
           continue;
