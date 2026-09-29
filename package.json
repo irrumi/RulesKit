@@ -1,0 +1,63 @@
+{
+  "name": "@irrumi/ruleskit",
+  "version": "0.1.0",
+  "description": "Evidence-based, local coding instructions for AI agents",
+  "type": "module",
+  "bin": {
+    "ruleskit": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "prepack": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/irrumi/RulesKit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/irrumi/RulesKit/issues"
+  },
+  "homepage": "https://github.com/irrumi/RulesKit#readme",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agents",
+    "codex",
+    "claude",
+    "rules",
+    "cli"
+  ],
+  "dependencies": {
+    "diff": "^9.0.0",
+    "ignore": "^7.0.10",
+    "jsonc-parser": "^3.3.1",
+    "smol-toml": "^1.9.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/diff": "^7.0.2",
+    "@types/node": "^26.6.3",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}

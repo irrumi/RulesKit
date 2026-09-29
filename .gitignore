@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+.env
+.env.*
+!.env.example
+.ruleskit/*.lock
+.codebase-memory/
+*.tmp
