@@ -90,6 +90,8 @@ Move desired edits inside managed blocks into canonical `userRules` before previ
 
 Detection runs without executing scripts or configuration modules. Conflicting package managers produce a warning and suppress a confident command-runner choice. Manifest detection means **declared**, not verified running or installed.
 
+Source-language evidence is recorded independently for each containing directory, with one representative source path per language in that directory. A sibling workspace using the same language does not suppress this evidence. Directory scopes are not a complete workspace model; generated agent files remain repository-wide with textual scope labels.
+
 The scanner applies built-in exclusions, nested `.gitignore` rules and root `.ruleskitignore` rules. It does not follow symbolic links or junctions. See [scan boundaries](configuration.md#scan-boundaries) for limits and ignored paths. Large snapshots fail explicit size limits instead of silently truncating instructions.
 
 ## CI audit in a consuming project

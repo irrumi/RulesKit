@@ -126,6 +126,43 @@ test('source language is not invented from package.json alone', async (t) => {
   assert(result.facts.some((f) => f.value === 'node:test'));
 });
 
+test('source language evidence is independent across mixed workspace scopes', async (t) => {
+  const root = await repository(t, 'monorepo');
+  await put(root, 'apps/admin/src/app.tsx', 'export const Admin = () => null;');
+  await put(root, 'apps/api/tasks/worker.py', '# background tasks');
+  await put(root, 'crates/service/src/main.rs', 'fn main() {}');
+  await put(root, 'crates/worker/src/main.rs', 'fn main() {}');
+  const first = await scan(root);
+  for (const [scope, value, file] of [
+    ['apps/admin/src', 'TypeScript', 'app.tsx'],
+    ['apps/web/src', 'TypeScript', 'app.tsx'],
+    ['apps/api/tasks', 'Python', 'worker.py'],
+    ['crates/service/src', 'Rust', 'main.rs'],
+    ['crates/worker/src', 'Rust', 'main.rs'],
+  ]) {
+    assert.deepEqual(
+      first.facts.find((f) => f.id === `language:${scope}:${value}`),
+      {
+        id: `language:${scope}:${value}`,
+        category: 'language',
+        value,
+        scope,
+        evidence: [`${scope}/${file}`],
+        confidence: 'fact',
+      },
+    );
+  }
+  assert.deepEqual(await scan(root), first);
+  // A lexically earlier sibling must not erase existing evidence or rule IDs.
+  await put(root, 'apps/aaa/src/app.tsx', 'export const App = () => null;');
+  const second = await scan(root);
+  for (const fact of first.facts)
+    assert.deepEqual(
+      second.facts.find((f) => f.id === fact.id),
+      fact,
+    );
+});
+
 test('configuration filename detection is exact', async (t) => {
   const root = await repository(t);
   for (const file of [

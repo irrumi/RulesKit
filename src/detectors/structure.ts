@@ -22,9 +22,10 @@ export const structureDetector: Detector = {
     for (const file of ctx.files) {
       const base = path.posix.basename(file);
       const language = languageExt[path.posix.extname(file)];
-      if (language && !languages.has(language)) {
+      const languageScope = `${path.posix.dirname(file)}:${language}`;
+      if (language && !languages.has(languageScope)) {
         ctx.add('language', language, file);
-        languages.add(language);
+        languages.add(languageScope);
       }
       const rules: [RegExp, Parameters<typeof ctx.add>[0], string][] = [
         [/^Dockerfile(?:\..+)?$/, 'infrastructure', 'Docker'],

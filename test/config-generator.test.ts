@@ -98,6 +98,36 @@ test('conflicting managers do not produce confident executable commands', async 
   assert(!renderRules(config).includes('npm run test'));
   assert(renderRules(config).includes('confirm the package manager'));
 });
+
+test('mixed workspace rules retain their framework and command scopes', async (t) => {
+  const root = await repository(t, 'monorepo');
+  await put(
+    root,
+    'crates/service/Cargo.toml',
+    "[package]\nname = 'service'\nversion = '0.1.0'\n",
+  );
+  const config = configSchema.parse({
+    version: 1,
+    agents: ['codex'],
+    detected: await scan(root),
+  });
+  const rules = generateRules(config);
+  for (const [value, scope, evidence] of [
+    ['React', 'apps/web', 'apps/web/package.json'],
+    ['Django', 'apps/api', 'apps/api/requirements.txt'],
+    ['cargo test', 'crates/service', 'crates/service/Cargo.toml'],
+  ]) {
+    const selected = rules.filter((r) => r.text.includes(value!));
+    assert(selected.length > 0);
+    for (const rule of selected) {
+      assert.equal(rule.scope, scope);
+      assert.deepEqual(rule.evidence, [evidence]);
+    }
+  }
+  // The root pnpm declaration must not select a runner for a child package.
+  assert(!renderRules(config).includes('pnpm run test'));
+  assert(renderRules(config).includes('[apps/web] An existing `test`'));
+});
 test('all adapters produce deterministic supported headers and own blocks', async (t) => {
   const config = configSchema.parse({
     version: 1,
